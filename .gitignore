@@ -1,0 +1,10 @@
+Makefile
+config.h
+config.log
+config.status
+rsedit
+rtsedit
+rtmedit
+.deps
+*.o
+stamp-h1

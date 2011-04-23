@@ -1,0 +1,10 @@
+A little tool I hacked together for editing sprite-animations, and saving them
+in a format retrosprite.[ch] understands.
+
+The source code of the tool itself should not be looked at.
+
+The source code of retrosprite.[ch] should be OK.
+
+Feel free to do whatever you want with this.
+
+  -- Trygve

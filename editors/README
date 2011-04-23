@@ -1,0 +1,67 @@
+Very brief usage information.
+
+
+rsedit, RetroSprite Edit
+
+    Used to assemble animations from a spritesheet, and save an .rs-file that
+    that can be later used with retrosprite.[ch]
+
+    Usage:
+
+        ./rsedit spritesheet.png spritewidth spriteheight
+
+        Load existing rsfile:
+
+        ./rsedit spritesheet.png spritewidth spriteheight rsfile.rs
+
+    Limitations:
+
+        The spritesheet must be dimensioned in the power of two, and it must be
+        square.
+
+        The spritewidth/height must be in the power of two.  The editor may not 
+        work properly unless the dimensions are square, but that's a limitation
+        in the editor - not in retrosprite.[ch].  Feel free to supply a patch,
+        if you want to.  :)
+
+        The saved file is always named 'out.rs', so make sure to copy it to
+        whatever you wanna call it.
+
+
+
+rtsedit, Retro TileSet Edit
+
+    Used to assemble tile animations from a tileset, and save a .rts-file that
+    can be later used with retroworld.[ch]
+
+    Usage:
+
+        ./rtsedit tilesheet.png tilewidth tileheight
+
+        Load existing rtsfile
+
+        ./rtsedit tilesheet.png tilewidth tileheight rtsfile.rts
+
+    Limitations:
+
+        Check rsedit.
+
+
+
+rtmedit, Retro TileMap Edit
+
+    Used to assemble a tilemap from a tileset, and save a .rtm-file that can be
+    later used with retroworld.[ch].
+
+    Usage:
+
+        ./rtmedit tilesheet.png tilewidth tileheight rtsfile.rts
+
+        Load existing rtmfile
+
+        ./rtmedit tilesheet.png tilewidth tileheight rtsfile.rts rtmfile.rtm
+
+    Limitations:
+
+        Check rsedit.
+

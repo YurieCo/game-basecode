@@ -51,8 +51,10 @@ typedef struct retroworldscreen_t {
 }RetroWorldScreen_t;
 
 void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id);
+void RW_DrawTileAt(RetroWorldTileset_t *s, uint16_t id, int x, int y);
 
 RetroWorldTileset_t * RW_LoadRetroWorldTileset(char *filename);
+RetroWorldTileset_t * RW_LoadRetroWorldTilesetwTex(char *filename, char *texfile, int w, int h);
 void RW_SaveRetroWorldTileset(char *filename, RetroWorldTileset_t *r);
 
 void RW_UpdateTileset(RetroWorldTileset_t *ts);
@@ -61,7 +63,17 @@ void RW_DrawScreen(RetroWorldScreen_t *s, int grid);
 void RW_DrawScreenColmap(RetroWorldScreen_t *s, RetroWorldTileset_t *ts);
 
 RetroWorldScreen_t * RW_LoadRetroWorldScreen(char *filename);
+RetroWorldScreen_t * RW_LoadRetroWorldScreenwTS(char *filename, RetroWorldTileset_t *ts);
+
 void RW_SaveRetroWorldScreen(char *filename, RetroWorldScreen_t *s);
+
+#define RW_PrintRoom(s) do { \
+        int i; \
+        for (i=0;i<s->w*s->h;i++) { \
+            printf(" %02x", s->map[i]); \
+            if ( i % s->w == s->w-1 ) printf("\n");\
+        }\
+    } while (0);
 
 
 #endif /* __RETROWORLD_H__ */

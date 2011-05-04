@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <GL/gl.h>
@@ -47,6 +48,14 @@ void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id)
     glPopMatrix();
 }
 
+void RW_DrawTileAt(RetroWorldTileset_t *s, uint16_t id, int x, int y)
+{
+    glPushMatrix();
+    glTranslated(x, y, 0);
+    RW_DrawTile(s, id);
+    glPopMatrix();
+}
+
 static void RW_UpdateTileAni(RetroWorldTileani_t *a)
 {
     a->frame++;
@@ -92,10 +101,10 @@ RetroWorldTileset_t * RW_LoadRetroWorldTileset(char *filename)
     size_t returned;
     int i, y;
     RetroWorldTileset_t *g = calloc(sizeof(RetroWorldTileset_t), 1);
-    FILE *f = fopen(filename, "r");
+    FILE *f = fopen(filename, "rb");
     if ( f == NULL )
     {
-        printf("Could not open file\n");
+        printf("Could not open file (%s)\n", filename);
         free(g);
         return NULL;
     }
@@ -110,6 +119,23 @@ RetroWorldTileset_t * RW_LoadRetroWorldTileset(char *filename)
     }
 
     fclose(f);
+
+    return g;
+}
+
+RetroWorldTileset_t * RW_LoadRetroWorldTilesetwTex(char *filename, char *texfile, int w, int h)
+{
+    int n;
+    RetroWorldTileset_t *g = RW_LoadRetroWorldTileset(filename);
+    g->pixels = stbi_load(texfile, (int*)&(g->tw), (int*)&(g->th), &n, 0);
+    g->w = w;
+    g->h = h;
+
+    glGenTextures(1, &(g->gl_texture));
+    glBindTexture(GL_TEXTURE_2D, g->gl_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, 4, g->tw, g->th, 0, GL_RGBA, GL_UNSIGNED_BYTE, g->pixels);
 
     return g;
 }
@@ -189,10 +215,10 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreen(char *filename)
     size_t returned;
     int i, y;
     RetroWorldScreen_t *s = calloc(sizeof(RetroWorldScreen_t), 1);
-    FILE *f = fopen(filename, "r");
+    FILE *f = fopen(filename, "rb");
     if ( f == NULL )
     {
-        printf("Could not open file\n");
+        printf("Could not open file (%s)\n", filename);
         free(s);
         return NULL;
     }
@@ -204,6 +230,7 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreen(char *filename)
     s->colmap = calloc(sizeof(uint8_t), s->w * s->h);
 
     returned = fread(s->map, sizeof(uint16_t), s->w * s->h, f);
+
     returned = fread(s->colmap, sizeof(uint8_t), s->w * s->h, f);
 
     fclose(f);
@@ -211,3 +238,12 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreen(char *filename)
     return s;
 }
 
+RetroWorldScreen_t * RW_LoadRetroWorldScreenwTS(char *filename, RetroWorldTileset_t *ts)
+{
+    RetroWorldScreen_t *sc = RW_LoadRetroWorldScreen(filename);
+    sc->ts = ts;
+    sc->tw = sc->ts->w;
+    sc->th = sc->ts->h;
+
+    return sc;
+}

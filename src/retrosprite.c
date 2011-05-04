@@ -1,6 +1,10 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
+
+#define STBI_HEADER_FILE_ONLY
+#include "stb_image.c"
+
 #include <GL/gl.h>
 
 #include "retrosprite.h"
@@ -55,7 +59,7 @@ void RS_DrawBoxArray(RetroSprite_t *arr, uint16_t elements)
     }
 }
 
-static void RS_DrawSprite(RetroSprite_t *s)
+void RS_DrawSprite(RetroSprite_t *s)
 {
     float fw = (float)s->spr->w / (float)s->spr->tw;
     float fh = (float)s->spr->h / (float)s->spr->th;
@@ -99,7 +103,7 @@ static void RS_DrawSprite(RetroSprite_t *s)
     stats.spr_drawn++;
 }
 
-void RS_DrawArray(RetroSprite_t *arr, uint16_t elements)
+void RS_DrawArray(RetroSprite_t *arr[], uint16_t elements)
 {
     int i;
     glEnable(GL_TEXTURE_2D);
@@ -107,7 +111,7 @@ void RS_DrawArray(RetroSprite_t *arr, uint16_t elements)
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     for (i=0;i<elements;i++)
     {
-        RS_DrawSprite(&arr[i]);
+        RS_DrawSprite(arr[i]);
     }
 }
 
@@ -150,7 +154,7 @@ RetroSpriteGfx_t * RS_LoadRetroSpriteGfx(char *filename)
     size_t returned;
     int i;
     RetroSpriteGfx_t *g = calloc(sizeof(RetroSpriteGfx_t), 1);
-    FILE *f = fopen(filename, "r");
+    FILE *f = fopen(filename, "rb");
     if ( f == NULL )
     {
         printf("Could not open file\n");
@@ -182,5 +186,51 @@ RetroSpriteGfx_t * RS_LoadRetroSpriteGfx(char *filename)
     fclose(f);
 
     return g;
+}
+
+RetroSpriteGfx_t * RS_LoadRetroSpriteGfxwTex(char *filename, char *texfile, int w, int h)
+{
+    int n;
+    RetroSpriteGfx_t *g = RS_LoadRetroSpriteGfx(filename);
+    g->pixels = stbi_load(texfile, (int*)&(g->tw), (int*)&(g->th), &n, 0);
+    
+    if ( !g->pixels )
+        printf("Shit is broken because the image failed to load, man!\n");
+
+    g->w = w;
+    g->h = h;
+
+    glGenTextures(1, &(g->gl_texture));
+    glBindTexture(GL_TEXTURE_2D, g->gl_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexImage2D(GL_TEXTURE_2D, 0, 4, g->tw, g->th, 0, GL_RGBA, GL_UNSIGNED_BYTE, g->pixels);
+
+    return g;
+}
+
+
+void RS_UpdateArray(RetroSprite_t * arr[], int els)
+{
+    int i;
+    for(i=0;i<els;i++) {
+        RS_UpdateSprite(arr[i]);
+    }
+}
+
+void RS_PerformLogicArray(RetroSprite_t * arr[], int els, void *data)
+{
+    int i;
+    for (i=0;i<els;i++) {
+        RS_PerformLogic(arr[i], data);
+    }
+}
+
+void RS_PerformLogic(RetroSprite_t *s, void *data)
+{
+    if ( s->logic->l[s->anim] )
+    {
+        (s->logic->l[s->anim])(s, data);
+    }
 }
 

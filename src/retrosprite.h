@@ -71,40 +71,31 @@ typedef struct retrosprite_t {
     uint16_t anim;
     uint16_t frame;
 
-    uint32_t registers[16];
+    int32_t registers[16];
 
     RetroSpriteLogic_t *logic; // Reference to a RetroSpriteLogic_t
 }RetroSprite_t;
 
 
-void RS_DrawArray(RetroSprite_t *arr, uint16_t elements);
+void RS_DrawSprite(RetroSprite_t *s);
+void RS_DrawArray(RetroSprite_t *arr[], uint16_t elements);
 void RS_DrawBoxArray(RetroSprite_t *arr, uint16_t elements);
 void RS_UpdateSprite(RetroSprite_t *s);
 
-void RS_PerformLogicArray(RetroSprite_t *arr, uint16_t elements, void *data);
-
 void RS_SaveRetroSpriteGfx(char *filename, RetroSpriteGfx_t *g);
 RetroSpriteGfx_t * RS_LoadRetroSpriteGfx(char *filename);
+RetroSpriteGfx_t * RS_LoadRetroSpriteGfxwTex(char *filename, char *texfile, int w, int h);
+
+void RS_UpdateArray(RetroSprite_t * arr[], int els);
+
+void RS_PerformLogic(RetroSprite_t *s, void *data);
+void RS_PerformLogicArray(RetroSprite_t * arr[], int els, void *data);
 
 
-#define RS_UpdateArray(arr, els) do { \
-        int i; \
-        for (i=0;i<els;i++) { \
-            RS_UpdateSprite(&arr[i]); \
-        } \
+#define RS_SetAnimation(s, ani) do { \
+        s->anim = ani; \
+        s->frame = 0; \
     } while(0);
-
-#define RS_PerformLogic(s, d) do { \
-        if ( s->logic->l[s->anim] ) (s->logic->l[s->anim])(s, d); \
-    } while(0);
-
-#define RS_PerformLogicArray(arr, els, d)  do { \
-        int i; \
-        for (i=0;i<els;i++) { \
-            RS_PerformLogic(&arr[i], d); \
-        } \
-    } while(0);
-
 
 void RS_ResetStats(void);
 void RS_PrintStats(void);

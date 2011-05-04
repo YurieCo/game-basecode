@@ -113,6 +113,23 @@ void draw(RetroWorldTileset_t *g, RetroWorldTileset_t *c, RetroWorldScreen_t *s)
     SDL_GL_SwapBuffers();
 }
 
+void update_canvas(RetroWorldTileset_t *g, RetroWorldScreen_t *s, SDL_MouseButtonEvent e)
+{
+    if ( e.y > 64 &&
+              e.x >= cam_x && e.x < cam_x + 2*((s->w)*s->tw) &&
+              e.y >= cam_y && e.y < cam_y + 2*((s->h)*s->th) )
+    {
+        int x = (e.x - cam_x) / (2*s->tw);
+        int y = (e.y - cam_y) / (2*s->th);
+
+        if ( cur_mode )
+            s->colmap[y*s->w + x] = cur_tile;
+        else
+            s->map[y*s->w + x] = cur_tile;
+        printf("x = %d, y = %d\n", x, y);
+    }
+}
+
 void click(RetroWorldTileset_t *g, RetroWorldScreen_t *s, SDL_MouseButtonEvent e)
 {
     int i;
@@ -240,6 +257,8 @@ void click(RetroWorldTileset_t *g, RetroWorldScreen_t *s, SDL_MouseButtonEvent e
     {
         RW_SaveRetroWorldScreen("out.rtm", s);
     }
+
+    printf("Size: %d x %d\n", s->w, s->h);
 }
 
 int main(int argc, char *argv[])
@@ -354,6 +373,10 @@ int main(int argc, char *argv[])
                 {
                     cam_x += e.motion.xrel;
                     cam_y += e.motion.yrel;
+                }
+                if ( e.motion.state & SDL_BUTTON(1) )
+                {
+                    update_canvas(g, s, e.button);
                 }
                 break;
             case SDL_MOUSEBUTTONUP:

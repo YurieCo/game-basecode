@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "retrocommon.h"
+
 typedef struct retroworldtileani_t {
     uint16_t *indices;
     uint16_t frames;
@@ -15,9 +17,10 @@ typedef struct retroworldtileani_t {
 #define RW_TILEATTRIBUTE_TOUCHTRIGGER   2
 
 typedef struct retroworldtileset_t {
-    uint32_t gl_texture;
-    char *pixels;
-    uint32_t tw, th;
+    RetroGfx_t *gfx;
+/*    uint32_t gl_texture;
+    char *pixels;*/
+//    uint32_t tw, th;
     uint16_t w, h;
     uint16_t anims_n;
     RetroWorldTileani_t *anims;
@@ -50,6 +53,12 @@ typedef struct retroworldscreen_t {
     uint8_t *colmap;
 }RetroWorldScreen_t;
 
+typedef struct retroworldscreentable_t {
+    RetroWorldScreen_t **w;
+    
+    uint32_t w_n;
+}RetroWorldScreenTable_t;
+
 void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id);
 void RW_DrawTileAt(RetroWorldTileset_t *s, uint16_t id, int x, int y);
 
@@ -66,6 +75,10 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreen(char *filename);
 RetroWorldScreen_t * RW_LoadRetroWorldScreenwTS(char *filename, RetroWorldTileset_t *ts);
 
 void RW_SaveRetroWorldScreen(char *filename, RetroWorldScreen_t *s);
+
+void RW_PushTable(RetroWorldScreenTable_t *t, RetroWorldScreen_t *s);
+RetroWorldScreenTable_t *RW_NewTable(void);
+
 
 #define RW_PrintRoom(s) do { \
         int i; \

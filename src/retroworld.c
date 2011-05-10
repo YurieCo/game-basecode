@@ -7,21 +7,25 @@
 
 void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id)
 {
-    float fw = (float)s->w / (float)s->tw;
-    float fh = (float)s->h / (float)s->th;
+    float fw = (float)s->w / (float)s->gfx->w;
+    float fh = (float)s->h / (float)s->gfx->h;
     glEnable(GL_TEXTURE_2D);
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    int fpw = s->tw / s->w;
-    int fph = s->th / s->h;
+    int fpw = s->gfx->w / s->w;
+    int fph = s->gfx->h / s->h;
 
     int fid = 0;
+
+//    printf("%d x %d, %d x %d\n", s->w, s->h, s->gfx->w, s->gfx->h);
+//    printf("Gonna look up stuff. id: %d (%f, %f)\n", id, fpw, fph);
 
     if ( id == 0 ) return;
     else if ( id <= fpw * fph ) fid = id - 1;
     else fid = s->anims[id - (fpw * fph) -1].indices[s->anims[id - (fpw * fph) -1].frame];
 
+//    printf("Looked up stuff\n");
 
     float vcoords[] = {
         0, 0,
@@ -39,7 +43,7 @@ void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id)
 
 
     glColor4f(1, 1, 1, 1);
-    glBindTexture(GL_TEXTURE_2D, s->gl_texture);
+    glBindTexture(GL_TEXTURE_2D, s->gfx->gl);
     glVertexPointer(2, GL_FLOAT, 0, vcoords);
     glTexCoordPointer(2, GL_FLOAT, 0, tcoords);
 
@@ -120,6 +124,8 @@ RetroWorldTileset_t * RW_LoadRetroWorldTileset(char *filename)
 
     fclose(f);
 
+    printf("Loaded '%s'\n", filename);
+
     return g;
 }
 
@@ -127,15 +133,11 @@ RetroWorldTileset_t * RW_LoadRetroWorldTilesetwTex(char *filename, char *texfile
 {
     int n;
     RetroWorldTileset_t *g = RW_LoadRetroWorldTileset(filename);
-    g->pixels = stbi_load(texfile, (int*)&(g->tw), (int*)&(g->th), &n, 0);
+    g->gfx = RC_GetGfx(texfile);
     g->w = w;
     g->h = h;
 
-    glGenTextures(1, &(g->gl_texture));
-    glBindTexture(GL_TEXTURE_2D, g->gl_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, 4, g->tw, g->th, 0, GL_RGBA, GL_UNSIGNED_BYTE, g->pixels);
+    printf("RW_LoadRetroWorldTilesetwTex: Loaded '%s' and '%s' - %d x %d\n", filename, texfile, w, h);
 
     return g;
 }
@@ -151,12 +153,14 @@ void RW_DrawScreen(RetroWorldScreen_t *s, int grid)
         s->tw, s->th,
         0, s->th
     };
+//    printf("A tile is %d wide and %d tall!\n", s->tw, s->th);
 
     glPushMatrix();
     for (y=0; y<s->h; y++)
     {
         for (x=0; x<s->w; x++)
         {
+//            printf("Calling RW_DrawTile\n");
             RW_DrawTile(s->ts, s->map[(y*s->w)+x]);
             if ( grid == 1 )
             {
@@ -235,6 +239,8 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreen(char *filename)
 
     fclose(f);
 
+//    printf("RW_LoadRetroWorldScreen: Loaded '%s' (%d, %d)\n", filename, s->w, s->h);
+
     return s;
 }
 
@@ -245,5 +251,30 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreenwTS(char *filename, RetroWorldTilese
     sc->tw = sc->ts->w;
     sc->th = sc->ts->h;
 
+//    printf("RW_LoadRetroWorldScreenwTS: Loaded '%s' (%d, %d)\n", filename, sc->w, sc->h);
+
     return sc;
 }
+
+void RW_PushTable(RetroWorldScreenTable_t *t, RetroWorldScreen_t *s)
+{
+    if ( !s )
+        return;
+
+    t->w_n++;
+
+    t->w = realloc(t->w, t->w_n * sizeof(void*));
+    t->w[t->w_n-1] = s;
+
+//    printf("RW_PushTable: Element %d is %d w and %d h\n", t->w_n-1, t->w[t->w_n-1]->w, t->w[t->w_n-1]->h);
+
+//    printf("RW_PushTable: %d elements in total. Size: %d\n", t->w_n, t->w_n * sizeof(void*));
+}
+
+RetroWorldScreenTable_t *RW_NewTable(void)
+{
+    RetroWorldScreenTable_t *t = calloc(sizeof(RetroWorldScreenTable_t), 1);
+
+    return t;
+}
+

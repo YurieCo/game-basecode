@@ -11,6 +11,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 
+#include "retrocommon.h"
+
 typedef struct retrospritestats_t {
     uint32_t spr_drawn;
     uint32_t box_drawn;
@@ -36,11 +38,11 @@ typedef struct retrospritegfxanim_t {
 }__attribute__((__packed__)) RetroSpriteGfxAnim_t;
 
 typedef struct retrospritegfx_t {
-    uint32_t gl_texture;
-    char *pixels;
+    RetroGfx_t *gfx;
+    char filename[MAX_FILENAME_LENGTH];
 
     uint16_t w, h;   // Frame width / height
-    uint32_t tw, th; // Texture width / height
+//    uint32_t tw, th; // Texture width / height
 
     RetroSpriteGfxAnim_t *anims;
     uint16_t anims_n;
@@ -76,6 +78,22 @@ typedef struct retrosprite_t {
     RetroSpriteLogic_t *logic; // Reference to a RetroSpriteLogic_t
 }RetroSprite_t;
 
+#define RS_SORTAXIS_N 0
+#define RS_SORTAXIS_X 1
+#define RS_SORTAXIS_Y 2
+#define RS_SORTAXIS_Z 3
+
+typedef struct retrospritetable_t {
+    RetroSprite_t **s;
+
+    uint32_t s_n;
+
+    uint8_t sortaxis;
+}RetroSpriteTable_t;
+
+void RS_PushTable(RetroSpriteTable_t *t, RetroSprite_t *s);
+RetroSpriteTable_t *RS_NewTable(void);
+
 
 void RS_DrawSprite(RetroSprite_t *s);
 void RS_DrawArray(RetroSprite_t *arr[], uint16_t elements);
@@ -99,6 +117,8 @@ void RS_PerformLogicArray(RetroSprite_t * arr[], int els, void *data);
 
 void RS_ResetStats(void);
 void RS_PrintStats(void);
-
+int RS_CheckCol(RetroSprite_t *s1, RetroSprite_t *s2);
+RetroSprite_t *RS_NewSprite(int x, int y, int z, RetroSpriteGfx_t *g, RetroSpriteLogic_t *l, int anim);
+RetroSpriteGfx_t *RS_GetGfx(char *rsfile, char *gfxfile, int w, int h);
 
 #endif /* __RETROSPRITE_H__ */

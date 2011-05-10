@@ -79,7 +79,7 @@ RetroTextBuffer_t RT_LoadBuffer(char *filename)
 
     FILE *f = fopen(filename, "r");
 
-    while ( fgets(&(b.line[b.line_n]), RT_LINE_LENGTH-1, f)  )
+    while ( fgets(b.line[b.line_n], RT_LINE_LENGTH-1, f)  )
     {
         b.line_n++;
         b.line = realloc(b.line, (b.line_n+1)*sizeof(RetroTextString));

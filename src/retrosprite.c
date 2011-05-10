@@ -8,8 +8,15 @@
 #include <GL/gl.h>
 
 #include "retrosprite.h"
+#include "retrocommon.h"
 
+struct gfxtable {
+    RetroSpriteGfx_t **g;
+    int n;
+};
+static struct gfxtable gfxtable;
 static RetroSpriteStats_t stats;
+
 
 void RS_ResetStats(void)
 {
@@ -61,12 +68,13 @@ void RS_DrawBoxArray(RetroSprite_t *arr, uint16_t elements)
 
 void RS_DrawSprite(RetroSprite_t *s)
 {
-    float fw = (float)s->spr->w / (float)s->spr->tw;
-    float fh = (float)s->spr->h / (float)s->spr->th;
+//    printf("Texwidth: %d, framewidth: %d\n", s->spr->gfx->w, s->spr->w);
 
-    int fpw = s->spr->tw / s->spr->w;
-    int fph = s->spr->th / s->spr->h;
+    float fw = (float)s->spr->w / (float)s->spr->gfx->w;
+    float fh = (float)s->spr->h / (float)s->spr->gfx->h;
 
+    int fpw = s->spr->gfx->w / s->spr->w;
+    int fph = s->spr->gfx->h / s->spr->h;
 
     int fid = s->spr->anims[s->anim].indices[s->frame];
 
@@ -86,7 +94,7 @@ void RS_DrawSprite(RetroSprite_t *s)
 
 
     glColor4f(1, 1, 1, 1);
-    glBindTexture(GL_TEXTURE_2D, s->spr->gl_texture);
+    glBindTexture(GL_TEXTURE_2D, s->spr->gfx->gl);
     glVertexPointer(2, GL_FLOAT, 0, vcoords);
     glTexCoordPointer(2, GL_FLOAT, 0, tcoords);
 
@@ -111,6 +119,7 @@ void RS_DrawArray(RetroSprite_t *arr[], uint16_t elements)
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     for (i=0;i<elements;i++)
     {
+//        printf("element: %d\n", i);
         RS_DrawSprite(arr[i]);
     }
 }
@@ -192,20 +201,7 @@ RetroSpriteGfx_t * RS_LoadRetroSpriteGfxwTex(char *filename, char *texfile, int 
 {
     int n;
     RetroSpriteGfx_t *g = RS_LoadRetroSpriteGfx(filename);
-    g->pixels = stbi_load(texfile, (int*)&(g->tw), (int*)&(g->th), &n, 0);
-    
-    if ( !g->pixels )
-        printf("Shit is broken because the image failed to load, man!\n");
-
-    g->w = w;
-    g->h = h;
-
-    glGenTextures(1, &(g->gl_texture));
-    glBindTexture(GL_TEXTURE_2D, g->gl_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glTexImage2D(GL_TEXTURE_2D, 0, 4, g->tw, g->th, 0, GL_RGBA, GL_UNSIGNED_BYTE, g->pixels);
-
+    g->gfx = RC_GetGfx(texfile);
     return g;
 }
 
@@ -234,3 +230,80 @@ void RS_PerformLogic(RetroSprite_t *s, void *data)
     }
 }
 
+int RS_CheckCol(RetroSprite_t *s1, RetroSprite_t *s2)
+{
+    if ( RC_ColRect(
+        s1->x + s1->spr->anims[s1->anim].box.x,
+        s1->y + s1->spr->anims[s1->anim].box.y,
+        s1->spr->anims[s1->anim].box.w,
+        s1->spr->anims[s1->anim].box.h,
+        s2->x + s2->spr->anims[s2->anim].box.x,
+        s2->y + s2->spr->anims[s2->anim].box.y,
+        s2->spr->anims[s2->anim].box.w,
+        s2->spr->anims[s2->anim].box.h
+        ) )
+        return 1;
+    return 0;
+}
+
+RetroSpriteGfx_t *RS_GetGfx(char *rsfile, char *gfxfile, int w, int h)
+{
+    int i;
+    RetroSpriteGfx_t *g;
+
+    for(i=0;i<gfxtable.n;i++)
+    {
+        if ( strcmp(rsfile, gfxtable.g[i]->filename) == 0 )
+        {
+            if ( strcmp(gfxfile, gfxtable.g[i]->gfx->filename) == 0 )
+            {
+                return gfxtable.g[i];
+            }
+        }
+    }
+
+    g = RS_LoadRetroSpriteGfx(rsfile);
+    g->gfx = RC_GetGfx(gfxfile);
+    g->w = w;
+    g->h = h;
+
+    gfxtable.n++;
+    gfxtable.g = realloc(gfxtable.g, sizeof(void*)*gfxtable.n);
+    gfxtable.g[gfxtable.n-1] = g;
+
+    return gfxtable.g[gfxtable.n-1];
+}
+
+
+void RS_PushTable(RetroSpriteTable_t *t, RetroSprite_t *s)
+{
+    if ( !s )
+        return;
+
+    t->s_n++;
+
+    t->s = realloc(t->s, t->s_n * sizeof(void*));
+    t->s[t->s_n-1] = s;
+}
+
+RetroSpriteTable_t *RS_NewTable(void)
+{
+    RetroSpriteTable_t *t = calloc(sizeof(RetroSpriteTable_t), 1);
+
+    return t;
+}
+
+RetroSprite_t *RS_NewSprite(int x, int y, int z, RetroSpriteGfx_t *g, RetroSpriteLogic_t *l, int anim)
+{
+    RetroSprite_t *s = calloc(sizeof(RetroSprite_t), 1);
+
+    s->x = x;
+    s->y = y;
+    s->z = z;
+    s->spr = g;
+    s->logic = l;
+    s->anim = anim;
+
+    return s;
+
+}

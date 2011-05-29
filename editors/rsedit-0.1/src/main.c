@@ -89,6 +89,12 @@ void draw_buttons(RetroSpriteGfx_t *g)
     else
         vDrawString(280, 40, "once", 0.75, 0.75, 0.75, 1);
 
+    if ( g->anims[cur_anim].flags == RS_ANIM_MANUAL )
+        vDrawString(280, 180, "manual", 1, 1, 1, 1);
+    else
+        vDrawString(280, 180, "manual", 0.75, 0.75, 0.75, 1);
+
+
     sprintf(BUF, "%02d", g->anims[cur_anim].next_anim);
     vDrawString(300, 50, "[-]", 1, 0, 0, 1);
     vDrawString(324, 50, BUF, 1, 1, 1, 1);
@@ -218,6 +224,10 @@ void click(RetroSpriteGfx_t *g, SDL_MouseButtonEvent e)
     {
         g->anims[cur_anim].flags = RS_ANIM_ONCE;
         g->anims[cur_anim].next_anim = cur_anim;
+    }
+    else if ( e.x >= 280 && e.x < 320 && e.y >= 180 && e.y < 190 && cur_anim < g->anims_n )
+    {
+        g->anims[cur_anim].flags = RS_ANIM_MANUAL;
     }
     else if ( e.x >= 300 && e.x < 324 && e.y >= 50 && e.y < 60 && cur_anim < g->anims_n )
     {

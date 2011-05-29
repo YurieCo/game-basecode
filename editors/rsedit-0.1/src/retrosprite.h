@@ -39,6 +39,7 @@ enum {
 
 #define RS_ANIM_LOOP    0
 #define RS_ANIM_ONCE    1
+#define RS_ANIM_MANUAL  2
 
 typedef struct retrospritelogic_t {
     void *standard;

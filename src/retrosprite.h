@@ -56,6 +56,7 @@ enum {
 
 #define RS_ANIM_LOOP    0
 #define RS_ANIM_ONCE    1
+#define RS_ANIM_MANUAL  2
 
 #define RS_FLAGS_FLIP_V 1
 #define RS_FLAGS_FLIP_H 2
@@ -76,6 +77,7 @@ typedef struct retrosprite_t {
     int32_t registers[16];
 
     RetroSpriteLogic_t *logic; // Reference to a RetroSpriteLogic_t
+    int kill;
 }RetroSprite_t;
 
 #define RS_SORTAXIS_N 0
@@ -91,6 +93,7 @@ typedef struct retrospritetable_t {
     uint8_t sortaxis;
 }RetroSpriteTable_t;
 
+void RS_PopTable(RetroSpriteTable_t *t, RetroSprite_t *s);
 void RS_PushTable(RetroSpriteTable_t *t, RetroSprite_t *s);
 RetroSpriteTable_t *RS_NewTable(void);
 
@@ -120,5 +123,8 @@ void RS_PrintStats(void);
 int RS_CheckCol(RetroSprite_t *s1, RetroSprite_t *s2);
 RetroSprite_t *RS_NewSprite(int x, int y, int z, RetroSpriteGfx_t *g, RetroSpriteLogic_t *l, int anim);
 RetroSpriteGfx_t *RS_GetGfx(char *rsfile, char *gfxfile, int w, int h);
+
+int RS_CleanTable(RetroSpriteTable_t *t);
+void RS_PrintTable(RetroSpriteTable_t *t);
 
 #endif /* __RETROSPRITE_H__ */

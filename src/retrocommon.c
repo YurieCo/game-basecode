@@ -65,3 +65,26 @@ int RC_ColRect(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2)
     return 1;
 }
 
+void RC_DrawTexture(RetroGfx_t *t, int x, int y, int w, int h, int r, int g, int b, int a)
+{
+    float vcoords[] = {
+        x, y,
+        x+w, y,
+        x+w, y+h,
+        x, y+h
+    };
+    float tcoords[] = {
+        0, 0,
+        1, 0,
+        1, 1,
+        0, 1
+    };
+    glEnable(GL_TEXTURE_2D);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glColor4d(r, g, b, a);
+    glBindTexture(GL_TEXTURE_2D, t->gl);
+    glVertexPointer(2, GL_FLOAT, 0, vcoords);
+    glTexCoordPointer(2, GL_FLOAT, 0, tcoords);
+    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
+}

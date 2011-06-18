@@ -1,14 +1,18 @@
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define STBI_HEADER_FILE_ONLY
 #include "stb_image.c"
 
 #include <GL/gl.h>
 
+#include "debug.h"
 #include "retrosprite.h"
 #include "retrocommon.h"
+
+#define MAX_SPRITES 1024
 
 struct gfxtable {
     RetroSpriteGfx_t **g;
@@ -28,12 +32,12 @@ void RS_ResetStats(void)
 
 void RS_PrintStats(void)
 {
-    printf("Retrosprite Statistics:\n");
-    printf("     spr.drawn: %8d\n", stats.spr_drawn);
-    printf("     box.drawn: %8d\n", stats.box_drawn);
-    printf("    col.checks: %8d\n", stats.col_checks);
-    printf("     col.found: %8d\n", stats.col_found);
-    printf("\n");
+    retrodebug("Retrosprite Statistics:\n");
+    retrodebug("     spr.drawn: %8d\n", stats.spr_drawn);
+    retrodebug("     box.drawn: %8d\n", stats.box_drawn);
+    retrodebug("    col.checks: %8d\n", stats.col_checks);
+    retrodebug("     col.found: %8d\n", stats.col_found);
+    retrodebug("\n");
 }
 
 static void RS_DrawBox(RetroSprite_t *s)
@@ -68,7 +72,7 @@ void RS_DrawBoxArray(RetroSprite_t *arr, uint16_t elements)
 
 void RS_DrawSprite(RetroSprite_t *s)
 {
-//    printf("Texwidth: %d, framewidth: %d\n", s->spr->gfx->w, s->spr->w);
+//    retrodebug("Texwidth: %d, framewidth: %d\n", s->spr->gfx->w, s->spr->w);
 
     float fw = (float)s->spr->w / (float)s->spr->gfx->w;
     float fh = (float)s->spr->h / (float)s->spr->gfx->h;
@@ -119,13 +123,16 @@ void RS_DrawArray(RetroSprite_t *arr[], uint16_t elements)
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     for (i=0;i<elements;i++)
     {
-//        printf("element: %d\n", i);
+//        retrodebug("element: %d\n", i);
         RS_DrawSprite(arr[i]);
     }
 }
 
 void RS_UpdateSprite(RetroSprite_t *s)
 {
+    if ( s->spr->anims[s->anim].flags == RS_ANIM_MANUAL )
+        return;
+
     s->frame++;
     if ( s->spr->anims[s->anim].flags == RS_ANIM_ONCE && s->frame >= s->spr->anims[s->anim].frames )
     {
@@ -142,7 +149,7 @@ void RS_SaveRetroSpriteGfx(char *filename, RetroSpriteGfx_t *g)
     FILE *f = fopen(filename, "w");
     if ( f == NULL )
     {
-        printf("Could not create or open file, for some reason.\n");
+        retrodebug("Could not create or open file, for some reason.\n");
         return;
     }
     
@@ -155,7 +162,7 @@ void RS_SaveRetroSpriteGfx(char *filename, RetroSpriteGfx_t *g)
         fwrite(g->anims[i].indices, sizeof(uint16_t), g->anims[i].frames, f);
 
     fclose(f);
-    printf("%s written.\n", filename);
+    retrodebug("%s written.\n", filename);
 }
 
 RetroSpriteGfx_t * RS_LoadRetroSpriteGfx(char *filename)
@@ -166,7 +173,7 @@ RetroSpriteGfx_t * RS_LoadRetroSpriteGfx(char *filename)
     FILE *f = fopen(filename, "rb");
     if ( f == NULL )
     {
-        printf("Could not open file\n");
+        retrodebug("Could not open file\n");
         free(g);
         return NULL;
     }
@@ -176,20 +183,12 @@ RetroSpriteGfx_t * RS_LoadRetroSpriteGfx(char *filename)
     for (i=0;i<g->anims_n;i++)
     {
         returned = fread(&(g->anims[i]), offsetof(RetroSpriteGfxAnim_t, indices), 1, f);
-/*        printf("Read %u bytes for animation %d\n", returned, i);
-        printf("Animation no #%d\n"
-               "  - frames: %d\n"
-               "  - box: %d %d %d %d\n"
-               "  - offset: %d %d\n"
-               "  - flags: %d\n"
-               "  - next_anim: %d\n", i, 
-               g->anims[i].frames, g->anims[i].box.x, g->anims[i].box.y, g->anims[i].box.w, g->anims[i].box.h, g->anims[i].offset.x, g->anims[i].offset.y, g->anims[i].flags, g->anims[i].next_anim);*/
     }
     for (i=0;i<g->anims_n;i++)
     {
         g->anims[i].indices = calloc(sizeof(uint16_t), g->anims[i].frames);
         returned = fread(g->anims[i].indices, sizeof(uint16_t), g->anims[i].frames, f);
-//        printf("Read %d / %d indices.\n", returned, g->anims[i].frames);
+//        retrodebug("Read %d / %d indices.\n", returned, g->anims[i].frames);
     }
 
     fclose(f);
@@ -220,6 +219,7 @@ void RS_PerformLogicArray(RetroSprite_t * arr[], int els, void *data)
     for (i=0;i<els;i++) {
         RS_PerformLogic(arr[i], data);
     }
+    
 }
 
 void RS_PerformLogic(RetroSprite_t *s, void *data)
@@ -274,21 +274,52 @@ RetroSpriteGfx_t *RS_GetGfx(char *rsfile, char *gfxfile, int w, int h)
     return gfxtable.g[gfxtable.n-1];
 }
 
+void RS_PopTable(RetroSpriteTable_t *t, RetroSprite_t *s)
+{
+    int i;
+    if ( !s )
+        return;
+
+    for (i=0;i<t->s_n;i++)
+    {
+        if ( t->s[i] != s )
+            continue;
+
+        retrodebug("Doing memmove-stuff. memmove(%x, %x, %d)\n", &(t->s[i]), &(t->s[i+1]), t->s_n-i-1);
+        memmove(&(t->s[i]), &(t->s[i+1]), (t->s_n-i-1) * sizeof(void*));
+        retrodebug("Reducing sprite count.\n");
+        t->s_n--;
+        retrodebug("Realloc\n");
+//        t->s = realloc(t->s, t->s_n * sizeof(void*));
+        retrodebug("And we're done!\n");
+        return;
+    }
+}
 
 void RS_PushTable(RetroSpriteTable_t *t, RetroSprite_t *s)
 {
+//    void *old = t->s;
+
     if ( !s )
+        return;
+
+    if ( t->s_n == 1023 )
         return;
 
     t->s_n++;
 
-    t->s = realloc(t->s, t->s_n * sizeof(void*));
+//    t->s = realloc(t->s, t->s_n * sizeof(void*));
     t->s[t->s_n-1] = s;
+
+//    if ( old != t->s )
+//        retrodebug("Table-address changed\n");
 }
 
 RetroSpriteTable_t *RS_NewTable(void)
 {
     RetroSpriteTable_t *t = calloc(sizeof(RetroSpriteTable_t), 1);
+
+    t->s = calloc(sizeof(RetroSprite_t *), MAX_SPRITES);
 
     return t;
 }
@@ -303,7 +334,39 @@ RetroSprite_t *RS_NewSprite(int x, int y, int z, RetroSpriteGfx_t *g, RetroSprit
     s->spr = g;
     s->logic = l;
     s->anim = anim;
+    s->kill = 0;
 
     return s;
 
+}
+int RS_CleanTable(RetroSpriteTable_t *t)
+{
+    RetroSprite_t *s;
+    int i;
+//    printf("Cleaning ...\n");
+    for (i=0;i<t->s_n;i++)
+    {
+        if ( t->s[i]->kill )
+        {
+            s = t->s[i];
+            RS_PopTable(t, t->s[i]);
+            free(s);
+//            printf("Cleaned...\n");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void RS_PrintTable(RetroSpriteTable_t *t)
+{
+    int i;
+    retrodebug("-----\n");
+    retrodebug("Printing information about RetroSpriteTable_t at %x\n", t);
+    retrodebug("The table has: %d elements.\n", t->s_n);
+    for (i=0;i<t->s_n;i++)
+    {
+        retrodebug("Element %d located on address %x\n", i, t->s[i]);
+    }
+    retrodebug("-----\n");
 }

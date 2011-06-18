@@ -28,5 +28,6 @@ typedef struct retrogfx_t {
 RetroGfx_t *RC_GetGfx(char *filename);
 
 int RC_ColRect(int x1, int y1, int w1, int h1, int x2, int y2, int w2, int h2);
+void RC_DrawTexture(RetroGfx_t *t, int x, int y, int w, int h, int r, int g, int b, int a);
 
 #endif /* __RETROCOMMON_H__ */

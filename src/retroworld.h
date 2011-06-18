@@ -5,6 +5,24 @@
 
 #include "retrocommon.h"
 
+#define RW_SCREEN_LEFT       1
+#define RW_SCREEN_RIGHT      2
+#define RW_SCREEN_TOP        3
+#define RW_SCREEN_BOTTOM     4
+
+typedef struct retroscreenconn_t {
+    uint8_t fx;
+    uint8_t fy;
+    uint8_t fw;
+    uint8_t fh;
+    uint32_t toscreen;
+    uint8_t tx;
+    uint8_t ty;
+    uint8_t tw;
+    uint8_t th;
+}RetroScreenConn_t;
+
+
 typedef struct retroworldtileani_t {
     uint16_t *indices;
     uint16_t frames;
@@ -18,9 +36,6 @@ typedef struct retroworldtileani_t {
 
 typedef struct retroworldtileset_t {
     RetroGfx_t *gfx;
-/*    uint32_t gl_texture;
-    char *pixels;*/
-//    uint32_t tw, th;
     uint16_t w, h;
     uint16_t anims_n;
     RetroWorldTileani_t *anims;
@@ -36,14 +51,15 @@ typedef struct retroworldtrigger_t {
 
 #define RW_COL_NONE     0
 #define RW_COL_SOLID    1
-#define RW_COL_SLOPE_SW 2
-#define RW_COL_SLOPE_SE 3
-#define RW_COL_SLOPE_NE 4
-#define RW_COL_SLOPE_NW 5
+#define RW_COL_SLOPE_SW 2   /*  .\  */
+#define RW_COL_SLOPE_SE 3   /*  /.  */
+#define RW_COL_SLOPE_NE 4   /*  \.  */
+#define RW_COL_SLOPE_NW 5   /*  ./  */
 #define RW_COL_SOLID_N  6
 #define RW_COL_SOLID_S  7
 #define RW_COL_SOLID_W  8
 #define RW_COL_SOLID_E  9
+#define RW_COL_LADDER   10
 
 typedef struct retroworldscreen_t {
     uint16_t w,h;
@@ -55,11 +71,14 @@ typedef struct retroworldscreen_t {
 
 typedef struct retroworldscreentable_t {
     RetroWorldScreen_t **w;
+    RetroScreenConn_t *c;
     
     uint32_t w_n;
+    uint32_t w_c;
 }RetroWorldScreenTable_t;
 
-void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id);
+//void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id);
+void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id, int x, int y, int first);
 void RW_DrawTileAt(RetroWorldTileset_t *s, uint16_t id, int x, int y);
 
 RetroWorldTileset_t * RW_LoadRetroWorldTileset(char *filename);
@@ -77,8 +96,10 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreenwTS(char *filename, RetroWorldTilese
 void RW_SaveRetroWorldScreen(char *filename, RetroWorldScreen_t *s);
 
 void RW_PushTable(RetroWorldScreenTable_t *t, RetroWorldScreen_t *s);
-RetroWorldScreenTable_t *RW_NewTable(void);
+void RW_PushConnToTable(RetroWorldScreenTable_t *t, uint8_t fx, uint8_t fy, uint8_t fw, uint8_t fh, 
+                        uint32_t toscreen, uint8_t tx, uint8_t ty, uint8_t tw, uint8_t th);
 
+RetroWorldScreenTable_t *RW_NewTable(void);
 
 #define RW_PrintRoom(s) do { \
         int i; \

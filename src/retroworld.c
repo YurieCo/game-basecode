@@ -3,60 +3,64 @@
 #include <stdlib.h>
 #include <GL/gl.h>
 
+#include "debug.h"
+
 #include "retroworld.h"
 
-void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id)
+static float *vcoords = NULL;
+static float *tcoords = NULL;
+
+static inline void RW_PrepareDrawTile(RetroWorldTileset_t *s)
 {
-    float fw = (float)s->w / (float)s->gfx->w;
-    float fh = (float)s->h / (float)s->gfx->h;
     glEnable(GL_TEXTURE_2D);
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+    glBindTexture(GL_TEXTURE_2D, s->gfx->gl);
+    glVertexPointer(2, GL_FLOAT, 0, vcoords);
+    glTexCoordPointer(2, GL_FLOAT, 0, tcoords);
+}
+
+/*
+    TODO: This function can be improved by precalculating most of these values.
+*/
+void RW_DrawTile(RetroWorldTileset_t *s, uint16_t id, int x, int y, int first)
+{
+    float fw = (float)s->w / (float)s->gfx->w;
+    float fh = (float)s->h / (float)s->gfx->h;
 
     int fpw = s->gfx->w / s->w;
     int fph = s->gfx->h / s->h;
 
     int fid = 0;
 
-//    printf("%d x %d, %d x %d\n", s->w, s->h, s->gfx->w, s->gfx->h);
-//    printf("Gonna look up stuff. id: %d (%f, %f)\n", id, fpw, fph);
-
-    if ( id == 0 ) return;
+    if ( id == 0 ) fid = 0;
     else if ( id <= fpw * fph ) fid = id - 1;
     else fid = s->anims[id - (fpw * fph) -1].indices[s->anims[id - (fpw * fph) -1].frame];
 
-//    printf("Looked up stuff\n");
+    first *= 8;
 
-    float vcoords[] = {
-        0, 0,
-        s->w, 0,
-        s->w, s->h,
-        0, s->h,
-    };
+    vcoords[first+0] = x + 0;     vcoords[first+1] = y + 0;
+    vcoords[first+2] = x + s->w;  vcoords[first+3] = y + 0;
+    vcoords[first+4] = x + s->w;  vcoords[first+5] = y + s->h;
+    vcoords[first+6] = x + 0;     vcoords[first+7] = y + s->h;
 
-    float tcoords[8];
-
-    tcoords[0] = 0.0 + ( fw * ( fid % fpw ) ); tcoords[1] = 0.0 + ( fh * ( fid / fph ) );
-    tcoords[2] = fw  + ( fw * ( fid % fpw ) ); tcoords[3] = 0.0 + ( fh * ( fid / fph ) );
-    tcoords[4] = fw  + ( fw * ( fid % fpw ) ); tcoords[5] = fh  + ( fh * ( fid / fph ) );
-    tcoords[6] = 0.0 + ( fw * ( fid % fpw ) ); tcoords[7] = fh  + ( fh * ( fid / fph ) );
-
-
-    glColor4f(1, 1, 1, 1);
-    glBindTexture(GL_TEXTURE_2D, s->gfx->gl);
-    glVertexPointer(2, GL_FLOAT, 0, vcoords);
-    glTexCoordPointer(2, GL_FLOAT, 0, tcoords);
-
-    glPushMatrix();
-    glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
-    glPopMatrix();
+    tcoords[first+0] = 0.0 + ( fw * ( fid % fpw ) ); tcoords[first+1] = 0.0 + ( fh * ( fid / fph ) );
+    tcoords[first+2] = fw  + ( fw * ( fid % fpw ) ); tcoords[first+3] = 0.0 + ( fh * ( fid / fph ) );
+    tcoords[first+4] = fw  + ( fw * ( fid % fpw ) ); tcoords[first+5] = fh  + ( fh * ( fid / fph ) );
+    tcoords[first+6] = 0.0 + ( fw * ( fid % fpw ) ); tcoords[first+7] = fh  + ( fh * ( fid / fph ) );
 }
 
 void RW_DrawTileAt(RetroWorldTileset_t *s, uint16_t id, int x, int y)
 {
+    vcoords = realloc(vcoords, sizeof(float) * 8);
+    tcoords = realloc(tcoords, sizeof(float) * 8);
+
+    RW_PrepareDrawTile(s);
+    glColor4f(1, 1, 1, 1);
+
     glPushMatrix();
-    glTranslated(x, y, 0);
-    RW_DrawTile(s, id);
+    RW_DrawTile(s, id, x, y, 0);
+    glDrawArrays(GL_QUADS, 0, 4);
     glPopMatrix();
 }
 
@@ -84,7 +88,7 @@ void RW_SaveRetroWorldTileset(char *filename, RetroWorldTileset_t *r)
     FILE *f = fopen(filename, "w");
     if ( f == NULL )
     {
-        printf("Could not create or open file, for some reason.\n");
+        retrodebug("Could not create or open file, for some reason.\n");
         return;
     }
 
@@ -97,7 +101,7 @@ void RW_SaveRetroWorldTileset(char *filename, RetroWorldTileset_t *r)
     }
 
     fclose(f);
-    printf("%s written.\n", filename);
+    retrodebug("%s written.\n", filename);
 }
 
 RetroWorldTileset_t * RW_LoadRetroWorldTileset(char *filename)
@@ -108,7 +112,7 @@ RetroWorldTileset_t * RW_LoadRetroWorldTileset(char *filename)
     FILE *f = fopen(filename, "rb");
     if ( f == NULL )
     {
-        printf("Could not open file (%s)\n", filename);
+        retrodebug("Could not open file (%s)\n", filename);
         free(g);
         return NULL;
     }
@@ -124,7 +128,7 @@ RetroWorldTileset_t * RW_LoadRetroWorldTileset(char *filename)
 
     fclose(f);
 
-    printf("Loaded '%s'\n", filename);
+    retrodebug("Loaded '%s'\n", filename);
 
     return g;
 }
@@ -137,59 +141,51 @@ RetroWorldTileset_t * RW_LoadRetroWorldTilesetwTex(char *filename, char *texfile
     g->w = w;
     g->h = h;
 
-    printf("RW_LoadRetroWorldTilesetwTex: Loaded '%s' and '%s' - %d x %d\n", filename, texfile, w, h);
+    retrodebug("RW_LoadRetroWorldTilesetwTex: Loaded '%s' and '%s' - %d x %d\n", filename, texfile, w, h);
 
     return g;
 }
 
 void RW_DrawScreen(RetroWorldScreen_t *s, int grid)
 {
-    int x, y;
+    int x, y, no = 0;
     glColor4f(1, 1, 1, 1);
 
-    float square[] = {
-        0.0, 0.0,
-        s->tw, 0.0,
-        s->tw, s->th,
-        0, s->th
-    };
-//    printf("A tile is %d wide and %d tall!\n", s->tw, s->th);
+    vcoords = realloc(vcoords, sizeof(float) * (8*s->w*s->h));
+    tcoords = realloc(tcoords, sizeof(float) * (8*s->w*s->h));
+    RW_PrepareDrawTile(s->ts);
 
     glPushMatrix();
     for (y=0; y<s->h; y++)
     {
         for (x=0; x<s->w; x++)
         {
-//            printf("Calling RW_DrawTile\n");
-            RW_DrawTile(s->ts, s->map[(y*s->w)+x]);
-            if ( grid == 1 )
-            {
-                glDisable(GL_TEXTURE_2D);
-                glVertexPointer(2,GL_FLOAT,0,square);
-                glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-                glDrawArrays(GL_LINE_LOOP,0,4);
-            }
-            glTranslatef(s->tw, 0, 0);
+            RW_DrawTile(s->ts, s->map[(y*s->w)+x], x * s->tw, y * s->th, no);
+            no++;
         }
-        glTranslatef((s->tw * s->w) * -1, s->th, 0);
     }
+    glDrawArrays(GL_QUADS, 0, 4*s->w*s->h);
     glPopMatrix();
 }
 
 void RW_DrawScreenColmap(RetroWorldScreen_t *s, RetroWorldTileset_t *ts)
 {
-    int x, y;
+    int x, y, no = 0;
+    glColor4f(1, 1, 1, 1);
+
+    vcoords = realloc(vcoords, sizeof(float) * (8*s->w*s->h));
+    tcoords = realloc(tcoords, sizeof(float) * (8*s->w*s->h));
 
     glPushMatrix();
     for (y=0; y<s->h; y++)
     {
         for (x=0; x<s->w; x++)
         {
-            RW_DrawTile(ts, s->colmap[(y*s->w)+x]);
-            glTranslatef(s->tw, 0, 0);
+            RW_DrawTile(ts, s->colmap[(y*s->w)+x], x * s->tw, y * s->th, no);
+            no++;
         }
-        glTranslatef((s->tw * s->w) * -1, s->th, 0);
     }
+    glDrawArrays(GL_QUADS, 0, 4*s->w*s->h);
     glPopMatrix();
 }
 
@@ -200,7 +196,7 @@ void RW_SaveRetroWorldScreen(char *filename, RetroWorldScreen_t *s)
     FILE *f = fopen(filename, "w");
     if ( f == NULL )
     {
-        printf("Could not create or open file, for some reason.\n");
+        retrodebug("Could not create or open file, for some reason.\n");
         return;
     }
 
@@ -211,7 +207,7 @@ void RW_SaveRetroWorldScreen(char *filename, RetroWorldScreen_t *s)
     fwrite(s->colmap, sizeof(uint8_t), s->w * s->h, f);
 
     fclose(f);
-    printf("%s written.\n", filename);
+    retrodebug("%s written.\n", filename);
 }
 
 RetroWorldScreen_t * RW_LoadRetroWorldScreen(char *filename)
@@ -222,7 +218,7 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreen(char *filename)
     FILE *f = fopen(filename, "rb");
     if ( f == NULL )
     {
-        printf("Could not open file (%s)\n", filename);
+        retrodebug("Could not open file (%s)\n", filename);
         free(s);
         return NULL;
     }
@@ -239,7 +235,7 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreen(char *filename)
 
     fclose(f);
 
-//    printf("RW_LoadRetroWorldScreen: Loaded '%s' (%d, %d)\n", filename, s->w, s->h);
+//    retrodebug("RW_LoadRetroWorldScreen: Loaded '%s' (%d, %d)\n", filename, s->w, s->h);
 
     return s;
 }
@@ -250,8 +246,6 @@ RetroWorldScreen_t * RW_LoadRetroWorldScreenwTS(char *filename, RetroWorldTilese
     sc->ts = ts;
     sc->tw = sc->ts->w;
     sc->th = sc->ts->h;
-
-//    printf("RW_LoadRetroWorldScreenwTS: Loaded '%s' (%d, %d)\n", filename, sc->w, sc->h);
 
     return sc;
 }
@@ -265,10 +259,27 @@ void RW_PushTable(RetroWorldScreenTable_t *t, RetroWorldScreen_t *s)
 
     t->w = realloc(t->w, t->w_n * sizeof(void*));
     t->w[t->w_n-1] = s;
+}
 
-//    printf("RW_PushTable: Element %d is %d w and %d h\n", t->w_n-1, t->w[t->w_n-1]->w, t->w[t->w_n-1]->h);
+void RW_PushConnToTable(RetroWorldScreenTable_t *t, uint8_t fx, uint8_t fy, uint8_t fw, uint8_t fh,
+                        uint32_t toscreen, uint8_t tx, uint8_t ty, uint8_t tw, uint8_t th)
+{
+    t->w_c++;
+    retrodebug("Allocating!\n");
+    t->c = realloc(t->c, t->w_c * sizeof(RetroScreenConn_t));
 
-//    printf("RW_PushTable: %d elements in total. Size: %d\n", t->w_n, t->w_n * sizeof(void*));
+    retrodebug("Allocated!\n");
+
+    t->c[t->w_c-1].fx = fx;
+    t->c[t->w_c-1].fy = fy;
+    t->c[t->w_c-1].fw = fw;
+    t->c[t->w_c-1].fh = fh;
+    t->c[t->w_c-1].toscreen = toscreen;
+    t->c[t->w_c-1].tx = tx;
+    t->c[t->w_c-1].ty = ty;
+    t->c[t->w_c-1].tw = tw;
+    t->c[t->w_c-1].th = th;
+    retrodebug("Populated!\n");
 }
 
 RetroWorldScreenTable_t *RW_NewTable(void)

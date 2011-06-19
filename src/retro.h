@@ -7,5 +7,6 @@
 #include "retrowsfuncs.h"
 #include "retrotext.h"
 #include "retroassets.h"
+#include "retrolights.h"
 
 #endif /* __RETRO_H__ */

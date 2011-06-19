@@ -65,6 +65,11 @@ typedef struct retrospritelogic_t {
     void (*l[256])();
 }RetroSpriteLogic_t;
 
+typedef struct retrolightinfo_t {
+    int emits; // Bool, 0 means it doesn't emit any light.
+    float radius; // 
+    float r, g, b; // The color of the light.
+}RetroLightInfo_t;
 
 typedef struct retrosprite_t {
     int x, y, z; // Position
@@ -78,6 +83,7 @@ typedef struct retrosprite_t {
 
     RetroSpriteLogic_t *logic; // Reference to a RetroSpriteLogic_t
     int kill;
+    RetroLightInfo_t light;
 }RetroSprite_t;
 
 #define RS_SORTAXIS_N 0

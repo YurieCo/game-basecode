@@ -41,6 +41,7 @@ RetroAssets_t * RA_LoadFile(char *filename, RetroSpriteLogic_t *log[])
 
     char s, t;
     int n1, n2, n3, n4, n5, n6, n7, n8, n9;
+    int e, r, g, b, rad;
 
     FILE *f = fopen(filename, "rb");
 
@@ -78,14 +79,20 @@ RetroAssets_t * RA_LoadFile(char *filename, RetroSpriteLogic_t *log[])
                 retrodebug(" failed!\n");
             }
         }
-        else if ( sscanf(buf, "sprite %d %d %d %s %s %d %d %d %d", &x, &y, &z, sprfile, imgfile, &w, &h, &logic, &anim) == 9 )
+        else if ( sscanf(buf, "sprite %d %d %d %s %s %d %d %d %d %d %d %d %d %d", &x, &y, &z, sprfile, imgfile, &w, &h, &logic, &anim, &e, &rad, &r, &g, &b) == 14 )
         {
             retrodebug("Creating new sprite...");
             spr = RS_NewSprite(x, y, z, RS_GetGfx(sprfile, imgfile, w, h), log[logic], anim);
+
             if ( spr )
             {
+                spr->light.emits = e;
+                spr->light.radius = rad;
+                spr->light.r = 0.5f * ((float)r / 255.0f);
+                spr->light.g = 0.5f * ((float)g / 255.0f);
+                spr->light.b = 0.5f * ((float)b / 255.0f);
                 RS_PushTable(as->s[as->a_n-1], spr);
-                retrodebug(" yay!\n");
+                retrodebug(" yay! (%f, %f, %f)\n", spr->light.r, spr->light.g, spr->light.b);
             }
             else
             {

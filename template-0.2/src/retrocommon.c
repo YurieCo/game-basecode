@@ -1,16 +1,69 @@
 #include <stdlib.h>
 #include <GL/gl.h>
+#include <AL/al.h>
 
 #define STBI_HEADER_FILE_ONLY
 #include "stb_image.c"
 
 #include "retrocommon.h"
+#include "retrosound.h"
 
 struct gfxtable {
     RetroGfx_t **g;
     int n;
 };
+struct sndtable {
+	RetroSnd_t **s;
+	int n;
+};
+
 struct gfxtable gfxtable;
+struct sndtable sndtable;
+
+RetroSnd_t *RC_GetSnd(char *filename)
+{
+	ALenum format = NULL;
+	int i;
+	RetroSnd_t *s;
+
+	RSO_Init();
+
+	for(i=0;i<sndtable.n;i++)
+    {
+        if ( strcmp(filename, sndtable.s[i]->filename) == 0 )
+            return sndtable.s[i];
+    }
+    printf("WE ARE LOADING THE SOUND FROM FILE!\n");
+
+	s = calloc(sizeof(RetroSnd_t), 1);
+
+	if ( SDL_LoadWAV(filename, &(s->spec), &(s->buf), &(s->length)) == NULL )
+	{
+		fprintf(stderr, "Could not open %s: %s\n", filename, SDL_GetError());
+		return NULL;
+	}
+	sprintf(s->filename, "%s", filename);
+
+	alGenBuffers(1, &(s->buffer));
+	switch (s->spec.format) {
+    	case AUDIO_U8:
+      	case AUDIO_S8:
+        	format = (s->spec.channels==1) ? AL_FORMAT_MONO8 : AL_FORMAT_STEREO8;
+        	break;
+      	case AUDIO_U16LSB:
+      	case AUDIO_S16LSB:
+        	format = (s->spec.channels==1) ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
+        	break;
+    }
+
+	alBufferData(s->buffer, format, s->buf, s->length, s->spec.freq);
+
+	sndtable.n++;
+	sndtable.s = realloc(sndtable.s, sizeof(void*)*sndtable.n);
+	sndtable.s[sndtable.n-1] = s;
+
+	return sndtable.s[sndtable.n-1];
+}
 
 RetroGfx_t *RC_GetGfx(char *filename)
 {

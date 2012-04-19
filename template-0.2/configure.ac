@@ -20,6 +20,7 @@ AC_PROG_LN_S
 # FIXME: Replace `main' with a function in `-lGL':
 PKG_CHECK_MODULES([GL],[gl])
 PKG_CHECK_MODULES([SDL],[sdl])
+PKG_CHECK_MODULES([OPENAL],[openal])
 
 AC_CHECK_LIB([GL], [main])
 # FIXME: Replace `main' with a function in `-lm':
